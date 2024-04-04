@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin - 예수동행일기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>어드민 페이지</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>사용자 ID</th>
+                <th>날짜</th>
+                <th>내용</th>
+                <th>예수님의 말씀</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for diary in diaries %}
+            <tr>
+                <td>{{ diary[1] }}</td>
+                <td>{{ diary[2] }}</td>
+                <td>{{ diary[3] }}</td>
+                <td>{{ diary[4] }}</td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>
