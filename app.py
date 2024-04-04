@@ -1,3 +1,5 @@
+from flask import url_for
+
 from flask import Flask, render_template, request, redirect, session
 import sqlite3
 import requests
@@ -6,7 +8,7 @@ app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
 # Claude API 키 설정
-CLAUDE_API_KEY = 'your_claude_api_key'
+CLAUDE_API_KEY = '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'
 CLAUDE_API_URL = 'https://api.anthropic.com/v1/complete'
 
 # 데이터베이스 연결 및 초기화 함수
