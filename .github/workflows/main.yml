@@ -1,0 +1,33 @@
+name: Deploy to Codespaces
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v3
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Configure environment
+      env:
+        CLAUDE_API_KEY: ${{ secrets.CLAUDE_API_KEY }}
+      run: |
+        echo "CLAUDE_API_KEY=$CLAUDE_API_KEY" >> $GITHUB_ENV
+        
+    - name: Launch Codespace
+      uses: gitpod-io/codespace-action@v1.0.0

@@ -7,8 +7,10 @@ import requests
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
+import os
+
 # Claude API 키 설정
-CLAUDE_API_KEY = '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'
+CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
 CLAUDE_API_URL = 'https://api.anthropic.com/v1/complete'
 
 # 데이터베이스 연결 및 초기화 함수
