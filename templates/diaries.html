@@ -7,18 +7,16 @@
 </head>
 <body>
     <h1>일기 목록</h1>
-    <a href="{{ url_for('write') }}">새 일기 작성</a>
     <ul>
     {% for diary in diaries %}
         <li>
             <h2>{{ diary[2] }}</h2>
             <p>{{ diary[3] }}</p>
             <p>예수님의 말씀: {{ diary[4] }}</p>
-            <a href="{{ url_for('edit', diary_id=diary[0]) }}">수정</a>
-            <a href="{{ url_for('delete', diary_id=diary[0]) }}" onclick="return confirm('정말로 삭제하시겠습니까?')">삭제</a>
         </li>
     {% endfor %}
     </ul>
+    <a href="{{ url_for('write') }}">새 일기 작성</a>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>

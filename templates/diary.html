@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Write Diary - 예수동행일기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>일기 작성</h1>
+    <form method="post" action="{{ url_for('write') }}">
+        <label for="date">날짜:</label>
+        <input type="date" name="date" id="date" required>
+        <label for="content">내용:</label>
+        <textarea name="content" id="content" required></textarea>
+        <input type="submit" value="작성">
+    </form>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

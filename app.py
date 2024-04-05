@@ -1,17 +1,13 @@
-from flask import url_for
-
-from flask import Flask, render_template, request, redirect, session
+from flask import Flask, render_template, request, redirect, session, url_for
 import sqlite3
-import requests
+import os
+import anthropic
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
-import os
-
 # Claude API 키 설정
 CLAUDE_API_KEY = os.environ.get('CLAUDE_API_KEY')
-CLAUDE_API_URL = 'https://api.anthropic.com/v1/complete'
 
 # 데이터베이스 연결 및 초기화 함수
 def init_db():
@@ -29,24 +25,34 @@ def init_db():
                  content TEXT NOT NULL,
                  comment TEXT,
                  FOREIGN KEY (user_id) REFERENCES users (id))''')
+    # 마스터 계정 생성
+    c.execute("SELECT * FROM users WHERE username = 'master'")
+    master_user = c.fetchone()
+    if not master_user:
+        c.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)", ('master', 'master_password', 1))
     conn.commit()
     conn.close()
 
 # 예수님의 말씀 댓글 생성 함수
 def generate_comment(diary_content):
-    headers = {
-        'Content-Type': 'application/json',
-        'X-API-Key': CLAUDE_API_KEY
-    }
-    data = {
-        'prompt': f'다음은 일기 내용입니다: {diary_content}\n이 일기에 대해 예수님께서 해주실 말씀을 성경 구절과 함께 작성해 주세요.',
-        'model': 'claude-v1',
-        'max_tokens_to_sample': 150,
-        'temperature': 0.7
-    }
-    response = requests.post(CLAUDE_API_URL, headers=headers, json=data)
-    result = response.json()
-    comment = result['completion'].strip()
+    client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+    prompt = f'\n\nHuman: 다음은 일기 내용입니다: {diary_content}\n이 일기에 대해 예수님께서 해주실 말씀을 성경 구절과 함께 작성해 주세요.\n\nAssistant:'
+    
+    try:
+        response = client.messages.create(
+            model='claude-3-opus-20240229',
+            max_tokens=150,
+            temperature=0.7,
+            messages=[
+                {'role': 'system', 'content': '당신은 예수님의 말씀을 전하는 AI 어시스턴트입니다.'},
+                {'role': 'user', 'content': prompt}
+            ]
+        )
+        comment = response['content'].strip()
+    except anthropic.APIError as e:
+        print(f'API Error: {e}')
+        comment = '예수님의 말씀을 생성하는 데 실패했습니다.'
+    
     return comment
 
 # 루트 URL
@@ -67,7 +73,7 @@ def login():
         conn.close()
         if user:
             session['user_id'] = user[0]
-            return redirect(url_for('index'))
+            return redirect(url_for('diaries'))
         else:
             return "Invalid username or password"
     return render_template('login.html')
@@ -86,30 +92,7 @@ def register():
         return redirect(url_for('login'))
     return render_template('register.html')
 
-# 일기 작성 라우트
-@app.route('/write', methods=['GET', 'POST'])
-def write():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-    if request.method == 'POST':
-        date = request.form['date']
-        content = request.form['content']
-        comment = generate_comment(content)  # 예수님의 말씀 댓글 생성
-        conn = sqlite3.connect('database.db')
-        c = conn.cursor()
-        c.execute("INSERT INTO diaries (user_id, date, content, comment) VALUES (?, ?, ?, ?)", (session['user_id'], date, content, comment))
-        conn.commit()
-        conn.close()
-        return redirect(url_for('index'))
-    return render_template('diary.html')
-
-if __name__ == '__main__':
-    init_db()
-    app.run(debug=True)
-
-
-
-
+# 일기 목록 라우트
 @app.route('/diaries')
 def diaries():
     if 'user_id' not in session:
@@ -121,10 +104,24 @@ def diaries():
     conn.close()
     return render_template('diaries.html', diaries=diaries)
 
+# 일기 작성 라우트
+@app.route('/write', methods=['GET', 'POST'])
+def write():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        date = request.form['date']
+        content = request.form['content']
+        comment = generate_comment(content)
+        conn = sqlite3.connect('database.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO diaries (user_id, date, content, comment) VALUES (?, ?, ?, ?)", (session['user_id'], date, content, comment))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('diaries'))
+    return render_template('diary.html')
 
-
-
-
+# 일기 수정 라우트
 @app.route('/edit/<int:diary_id>', methods=['GET', 'POST'])
 def edit(diary_id):
     if 'user_id' not in session:
@@ -134,7 +131,7 @@ def edit(diary_id):
     if request.method == 'POST':
         date = request.form['date']
         content = request.form['content']
-        comment = generate_comment(content)  # 예수님의 말씀 댓글 생성
+        comment = generate_comment(content)
         c.execute("UPDATE diaries SET date = ?, content = ?, comment = ? WHERE id = ?", (date, content, comment, diary_id))
         conn.commit()
         conn.close()
@@ -144,9 +141,7 @@ def edit(diary_id):
     conn.close()
     return render_template('edit.html', diary=diary)
 
-
-
-
+# 일기 삭제 라우트
 @app.route('/delete/<int:diary_id>')
 def delete(diary_id):
     if 'user_id' not in session:
@@ -158,20 +153,7 @@ def delete(diary_id):
     conn.close()
     return redirect(url_for('diaries'))
 
-
-def init_db():
-    conn = sqlite3.connect('database.db')
-    c = conn.cursor()
-    # ... (기존 코드)
-    # 마스터 계정 생성
-    c.execute("SELECT * FROM users WHERE username = 'master'")
-    master_user = c.fetchone()
-    if not master_user:
-        c.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)", ('master', 'master_password', 1))
-        conn.commit()
-    conn.close()
-
-
+# 어드민 페이지 라우트
 @app.route('/admin')
 def admin():
     if 'user_id' not in session:
@@ -180,11 +162,13 @@ def admin():
     c = conn.cursor()
     c.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],))
     user = c.fetchone()
-    if not user[3]:  # user[3]은 is_admin 열을 의미합니다.
+    if not user[3]:
         return "접근 권한이 없습니다."
     c.execute("SELECT * FROM diaries")
     diaries = c.fetchall()
     conn.close()
     return render_template('admin.html', diaries=diaries)
 
-
+if __name__ == '__main__':
+    init_db()
+    app.run(debug=True)
