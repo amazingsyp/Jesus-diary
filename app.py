@@ -36,16 +36,18 @@ def init_db():
 # 예수님의 말씀 댓글 생성 함수
 def generate_comment(diary_content):
     client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
-    prompt = f'\n\nHuman: 다음은 일기 내용입니다: {diary_content}\n이 일기에 대해 예수님께서 해주실 말씀을 성경 구절과 함께 작성해 주세요.\n\nAssistant:'
+    
+    system_prompt = "당신은 예수님입니다. 일기 내용과 관련하여 성경을 바탕으로 한 기독교적인 따뜻한 위로와 격려의 말씀을 해주세요."
+    user_prompt = f"다음은 일기 내용입니다: {diary_content}\n이 일기에 대해 예수님께서 하실 말씀을 부탁드립니다."
     
     try:
         response = client.messages.create(
             model='claude-3-opus-20240229',
-            max_tokens=150,
+            max_tokens=1000,
             temperature=0.7,
             messages=[
-                {'role': 'system', 'content': '당신은 예수님의 말씀을 전하는 AI 어시스턴트입니다.'},
-                {'role': 'user', 'content': prompt}
+                {'role': 'system', 'content': system_prompt},
+                {'role': 'user', 'content': user_prompt}
             ]
         )
         comment = response['content'].strip()
@@ -168,7 +170,6 @@ def admin():
     diaries = c.fetchall()
     conn.close()
     return render_template('admin.html', diaries=diaries)
-
 if __name__ == '__main__':
     init_db()
     app.run(debug=True)
