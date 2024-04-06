@@ -1,0 +1,15 @@
+<!-- templates/no_permission.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>권한 없음 - 예수동행일기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>접근 권한이 없습니다.</h1>
+    <p>관리자 계정으로 로그인 후 이용해 주세요.</p>
+    <a href="{{ url_for('login') }}">로그인 페이지로 이동</a>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

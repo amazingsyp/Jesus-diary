@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Create User - 예수동행일기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>새 사용자 생성</h1>
+    <form method="post">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" required>
+        <br>
+        <label for="is_admin">Admin:</label>
+        <input type="checkbox" id="is_admin" name="is_admin">
+        <br>
+        <input type="submit" value="생성">
+    </form>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

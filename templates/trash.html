@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>휴지통 - 예수동행일기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>휴지통</h1>
+    <ul>
+        {% for diary in diaries %}
+        <li>
+            {{ diary[2] }} - {{ diary[3]|truncate(30) }} - {{ diary[4]|truncate(30) }}
+            <a href="{{ url_for('recover', diary_id=diary[0]) }}">복구</a>
+        </li>
+        {% endfor %}
+    </ul>
+    <a href="{{ url_for('diaries') }}">일기 목록으로 가기</a>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

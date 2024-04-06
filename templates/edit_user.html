@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Edit User - 예수동행일기</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <h1>사용자 정보 수정</h1>
+    <form method="post">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" value="{{ user[1] }}" required>
+        <br>
+        <label for="password">Password:</label>
+        <input type="password" id="password" name="password" value="{{ user[2] }}">
+        <br>
+        <label for="is_admin">Admin:</label>
+        <input type="checkbox" id="is_admin" name="is_admin" {% if user[3] %}checked{% endif %}>
+        <br>
+        <input type="submit" value="수정">
+    </form>
+    <script src="{{ url_for('static', filename='js/script.js') }}"></script>
+</body>
+</html>

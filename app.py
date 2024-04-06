@@ -41,6 +41,19 @@ def init_db():
     conn.commit()
     conn.close()
 
+
+import sqlite3
+
+# 어드민 여부 확인 함수
+def is_admin(user_id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,))
+    is_admin_value = c.fetchone()[0]
+    conn.close()
+    return is_admin_value
+
+
 # 예수님의 말씀 댓글 생성 함수
 def generate_comment(diary_content):
     client = anthropic.Client(api_key=CLAUDE_API_KEY)
@@ -177,21 +190,91 @@ def delete_old_diaries():
     conn.commit()
     conn.close()
 
+# 어드민 여부 확인 함수
+def is_admin(user_id):
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute("SELECT is_admin FROM users WHERE id = ?", (user_id,))
+    is_admin = c.fetchone()[0]
+    conn.close()
+    return is_admin
+
+
+# 사용자 생성 라우트
+@app.route('/admin/create', methods=['GET', 'POST'])
+def create_user():
+    if 'user_id' not in session or not is_admin(session['user_id']):
+        return redirect(url_for('login'))
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        is_admin = 'is_admin' in request.form
+        conn = sqlite3.connect('database.db')
+        c = conn.cursor()
+        c.execute("INSERT INTO users (username, password, is_admin) VALUES (?, ?, ?)", (username, password, is_admin))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin'))
+    return render_template('create_user.html')
+
+# 사용자 수정 라우트
+@app.route('/admin/edit/<int:user_id>', methods=['GET', 'POST'])
+def edit_user(user_id):
+    if 'user_id' not in session or not is_admin(session['user_id']):
+        return redirect(url_for('login'))
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    if request.method == 'POST':
+        username = request.form['username']
+        password = request.form['password']
+        is_admin_value = 'is_admin' in request.form  # 여기를 수정했습니다
+        c.execute("UPDATE users SET username = ?, password = ?, is_admin = ? WHERE id = ?", (username, password, is_admin_value, user_id))
+        conn.commit()
+        conn.close()
+        return redirect(url_for('admin'))
+    c.execute("SELECT * FROM users WHERE id = ?", (user_id,))
+    user = c.fetchone()
+    conn.close()
+    return render_template('edit_user.html', user=user)
+
+# 사용자 삭제 라우트
+@app.route('/admin/delete/<int:user_id>')
+def delete_user(user_id):
+    if 'user_id' not in session or not is_admin(session['user_id']):
+        return redirect(url_for('login'))
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM users WHERE id = ?", (user_id,))
+    conn.commit()
+    conn.close()
+    return redirect(url_for('admin'))
+
 # 어드민 페이지 라우트
 @app.route('/admin')
 def admin():
+    if 'user_id' not in session or not is_admin(session['user_id']):
+        return render_template('no_permission.html')
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM users")
+    users = c.fetchall()
+    conn.close()
+    return render_template('admin.html', users=users)
+
+
+
+
+@app.route('/recover/<int:diary_id>', methods=['GET'])
+def recover(diary_id):
     if 'user_id' not in session:
         return redirect(url_for('login'))
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-    c.execute("SELECT * FROM users WHERE id = ?", (session['user_id'],))
-    user = c.fetchone()
-    if not user[3]:
-        return "접근 권한이 없습니다."
-    c.execute("SELECT * FROM diaries")
-    diaries = c.fetchall()
+    c.execute("UPDATE diaries SET deleted_at = NULL WHERE id = ?", (diary_id,))
+    conn.commit()
     conn.close()
-    return render_template('admin.html', diaries=diaries)
+    return redirect(url_for('diaries'))
+
 
 if __name__ == '__main__':
     init_db()
