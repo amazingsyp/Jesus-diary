@@ -18,13 +18,21 @@ def init_db():
                  username TEXT NOT NULL,
                  password TEXT NOT NULL,
                  is_admin INTEGER NOT NULL DEFAULT 0)''')
+    
+    # deleted_at 열이 없는 경우 추가
+    c.execute('''PRAGMA table_info(diaries)''')
+    if 'deleted_at' not in [column[1] for column in c.fetchall()]:
+        c.execute('''ALTER TABLE diaries ADD COLUMN deleted_at TEXT''')
+    
     c.execute('''CREATE TABLE IF NOT EXISTS diaries
                  (id INTEGER PRIMARY KEY AUTOINCREMENT,
                  user_id INTEGER NOT NULL,
                  date TEXT NOT NULL,
                  content TEXT NOT NULL,
                  comment TEXT,
+                 deleted_at TEXT,
                  FOREIGN KEY (user_id) REFERENCES users (id))''')
+    
     # 마스터 계정 생성
     c.execute("SELECT * FROM users WHERE username = 'master'")
     master_user = c.fetchone()
@@ -35,27 +43,21 @@ def init_db():
 
 # 예수님의 말씀 댓글 생성 함수
 def generate_comment(diary_content):
-    client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+    client = anthropic.Client(api_key=CLAUDE_API_KEY)
+
+    prompt = f"\n\nHuman: 다음은 일기 내용입니다: {diary_content}\n당신은 예수님입니다. 이 일기에 대해 성경 말씀을 바탕으로 따뜻한 위로와 격려의 말씀을 전해주세요.\n\nAssistant:"
+    messages = [{"role": "user", "content": prompt}]
     
-    system_prompt = "당신은 예수님입니다. 일기 내용과 관련하여 성경을 바탕으로 한 기독교적인 따뜻한 위로와 격려의 말씀을 해주세요."
-    user_prompt = f"다음은 일기 내용입니다: {diary_content}\n이 일기에 대해 예수님께서 하실 말씀을 부탁드립니다."
-    
-    try:
-        response = client.messages.create(
-            model='claude-3-opus-20240229',
-            max_tokens=1000,
-            temperature=0.7,
-            messages=[
-                {'role': 'system', 'content': system_prompt},
-                {'role': 'user', 'content': user_prompt}
-            ]
-        )
-        comment = response['content'].strip()
-    except anthropic.APIError as e:
-        print(f'API Error: {e}')
-        comment = '예수님의 말씀을 생성하는 데 실패했습니다.'
-    
+    response = client.messages.create(
+        max_tokens=800, 
+        messages=messages,
+        model="claude-3-opus-20240229"
+    )
+
+    comment = ''.join([block.text for block in response.content])
+
     return comment
+
 
 # 루트 URL
 @app.route('/')
@@ -101,7 +103,7 @@ def diaries():
         return redirect(url_for('login'))
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-    c.execute("SELECT * FROM diaries WHERE user_id = ?", (session['user_id'],))
+    c.execute("SELECT * FROM diaries WHERE user_id = ? AND deleted_at IS NULL", (session['user_id'],))
     diaries = c.fetchall()
     conn.close()
     return render_template('diaries.html', diaries=diaries)
@@ -150,10 +152,30 @@ def delete(diary_id):
         return redirect(url_for('login'))
     conn = sqlite3.connect('database.db')
     c = conn.cursor()
-    c.execute("DELETE FROM diaries WHERE id = ?", (diary_id,))
+    c.execute("UPDATE diaries SET deleted_at = datetime('now') WHERE id = ?", (diary_id,))
     conn.commit()
     conn.close()
     return redirect(url_for('diaries'))
+
+# 휴지통 라우트
+@app.route('/trash')
+def trash():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute("SELECT * FROM diaries WHERE user_id = ? AND deleted_at IS NOT NULL AND DATE(deleted_at, '+30 days') > DATE('now')", (session['user_id'],))
+    diaries = c.fetchall()
+    conn.close()
+    return render_template('trash.html', diaries=diaries)
+
+# 30일이 지난 일기 자동 삭제 함수
+def delete_old_diaries():
+    conn = sqlite3.connect('database.db')
+    c = conn.cursor()
+    c.execute("DELETE FROM diaries WHERE deleted_at IS NOT NULL AND DATE(deleted_at, '+30 days') <= DATE('now')")
+    conn.commit()
+    conn.close()
 
 # 어드민 페이지 라우트
 @app.route('/admin')
@@ -170,6 +192,8 @@ def admin():
     diaries = c.fetchall()
     conn.close()
     return render_template('admin.html', diaries=diaries)
+
 if __name__ == '__main__':
     init_db()
-    app.run(debug=True)
+    delete_old_diaries()
+    app.run(host='0.0.0.0', port=8000, debug=True)
