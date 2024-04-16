@@ -21,3 +21,31 @@
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
 </body>
 </html>
+
+<table>
+    <thead>
+        <tr>
+            <th>ID</th>
+            <th>Username</th>
+            <th>Email</th>  <!-- 추가 -->
+            <th>Is Admin</th>
+            <th>작성한 일기 개수</th>
+            <th>Actions</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for user in users %}
+        <tr>
+            <td>{{ user[0] }}</td>
+            <td>{{ user[1] }}</td>
+            <td>{{ user[3] }}</td>  <!-- 추가 -->
+            <td>{{ '예' if user[4] else '아니오' }}</td>  <!-- 수정 -->
+            <td>{{ user[5] }}</td>  <!-- 수정 -->
+            <td>
+                <a href="{{ url_for('edit_user', user_id=user[0]) }}">수정</a>
+                <a href="{{ url_for('delete_user', user_id=user[0]) }}" onclick="return confirm('정말로 삭제하시겠습니까?')">삭제</a>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>

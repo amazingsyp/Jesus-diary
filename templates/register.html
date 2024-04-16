@@ -7,11 +7,16 @@
 </head>
 <body>
     <h1>회원가입</h1>
-    <form method="post" action="{{ url_for('register') }}">
+    <form method="post">
         <label for="username">사용자명:</label>
-        <input type="text" name="username" id="username" required>
+        <input type="text" id="username" name="username" required><br>
+    
         <label for="password">비밀번호:</label>
-        <input type="password" name="password" id="password" required>
+        <input type="password" id="password" name="password" required><br>
+    
+        <label for="email">이메일:</label>  <!-- 추가 -->
+        <input type="email" id="email" name="email" required><br>  <!-- 추가 -->
+    
         <input type="submit" value="회원가입">
     </form>
     <script src="{{ url_for('static', filename='js/script.js') }}"></script>
